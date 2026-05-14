@@ -49,7 +49,7 @@ AWS Elastic Load Balancer
 │   │  Prometheus + Grafana   │   │
 │   └─────────────────────────┘   │
 └─────────────────────────────────┘
-
+```
 ---
 
 ## What Makes This Different From the Tutorial
@@ -81,6 +81,7 @@ AWS Elastic Load Balancer
 │   └── screenshots/
 ├── INCIDENT.md
 └── README.md
+```
 ---
 
 ## Prerequisites
