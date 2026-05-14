@@ -26,22 +26,30 @@ why it broke, and how it was fixed.
 ---
 
 ## Architecture
-┌─────────────────────────────────────┐
-                │          AWS EKS Cluster             │
-                │       (us-east-1, 2 nodes)           │
-                │                                      │
-Internet ──► ELB ──►│  ┌──────────┐     ┌──────────┐     │
-│  │  Pod 1   │     │  Pod 2   │     │
-│  │  2048    │     │  2048    │     │
-│  └──────────┘     └──────────┘     │
-│         ▲ HPA watches CPU           │
-│         │ scales pods 2 → 6         │
-│                                      │
-│  ┌────────────────────────────┐     │
-│  │    monitoring namespace     │     │
-│  │   Prometheus + Grafana      │     │
-│  └────────────────────────────┘     │
-└─────────────────────────────────────┘
+
+```
+Internet
+    │
+    ▼
+AWS Elastic Load Balancer
+    │
+    ▼
+┌─────────────────────────────────┐
+│         AWS EKS Cluster         │
+│         us-east-1, 2 nodes      │
+│                                 │
+│   ┌──────────┐  ┌──────────┐   │
+│   │  Pod 1   │  │  Pod 2   │   │
+│   │  2048    │  │  2048    │   │
+│   └──────────┘  └──────────┘   │
+│        HPA: scales 2 → 6        │
+│                                 │
+│   ┌─────────────────────────┐   │
+│   │   monitoring namespace  │   │
+│   │  Prometheus + Grafana   │   │
+│   └─────────────────────────┘   │
+└─────────────────────────────────┘
+
 ---
 
 ## What Makes This Different From the Tutorial
@@ -59,18 +67,19 @@ Internet ──► ELB ──►│  ┌──────────┐     �
 ---
 
 ## Repository Structure
+```
 2048-eks-project/
-├── cluster-config.yaml        # eksctl cluster definition
+├── cluster-config.yaml
 ├── manifests/
-│   ├── 2048-deployment.yaml   # hardened Deployment manifest
-│   ├── 2048-service.yaml      # LoadBalancer service
-│   └── 2048-hpa.yaml          # HorizontalPodAutoscaler
+│   ├── 2048-deployment.yaml
+│   ├── 2048-service.yaml
+│   └── 2048-hpa.yaml
 ├── monitoring/
-│   ├── alert-rules.yaml       # Prometheus alert rules
-│   └── prometheus-values.yaml # Helm values
+│   ├── alert-rules.yaml
+│   └── prometheus-values.yaml
 ├── docs/
-│   └── screenshots/           # Grafana dashboard, live game
-├── INCIDENT.md                # stress test findings + incidents
+│   └── screenshots/
+├── INCIDENT.md
 └── README.md
 ---
 
