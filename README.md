@@ -4,14 +4,9 @@
 **Date:** May 2026  
 **Stack:** AWS EKS · Kubernetes · Prometheus · Grafana · Helm · eksctl
 
-A end-to-end Kubernetes project deploying the 2048 game on 
-Amazon EKS, engineered to simulate production-grade decisions 
-rather than follow a tutorial step by step.
+An end-to-end Kubernetes project deploying the 2048 game on Amazon EKS using production-oriented practices including autoscaling, observability, security hardening, and load testing.
 
-This project covers containerised deployment, security hardening, 
-autoscaling, observability, and deliberate stress testing — with 
-an honest incident report documenting everything that broke, 
-why it broke, and how it was fixed.
+The project demonstrates containerised deployment on Kubernetes, real-time cluster monitoring with Prometheus and Grafana, and deliberate stress testing under sustained traffic. It also includes a detailed incident report documenting real deployment failures, root-cause analysis, and the fixes applied throughout the project.
 
 ---
 
@@ -38,10 +33,10 @@ AWS Elastic Load Balancer
 │         AWS EKS Cluster         │
 │         us-east-1, 2 nodes      │
 │                                 │
-│   ┌──────────┐  ┌──────────┐   │
-│   │  Pod 1   │  │  Pod 2   │   │
-│   │  2048    │  │  2048    │   │
-│   └──────────┘  └──────────┘   │
+│   ┌──────────┐  ┌──────────┐    │
+│   │  Pod 1   │  │  Pod 2   │    │
+│   │  2048    │  │  2048    │    │
+│   └──────────┘  └──────────┘    │
 │        HPA: scales 2 → 6        │
 │                                 │
 │   ┌─────────────────────────┐   │
@@ -289,3 +284,68 @@ full root cause analysis on:
 - Container image incompatibility with containerd v2.1
 - CrashLoopBackOff from over-aggressive security hardening
 - Prometheus installation timeout on fresh cluster
+
+---
+
+## Future Improvements
+
+These are not theoretical — each one addresses a specific 
+limitation discovered during this project.
+
+**1. Switch to AWS Application Load Balancer (ALB)**  
+The stress test revealed the Classic ELB was the bottleneck 
+under 100 concurrent users, not the pods. ALB handles HTTP/2, 
+WebSockets, and connection management significantly better. 
+Implementation: install the AWS Load Balancer Controller via 
+Helm and update the service annotations.
+
+**2. Add CloudFront CDN**  
+The 2048 game assets — HTML, CSS, JavaScript — never change 
+between requests. Every user is downloading the same files 
+from the same ELB. CloudFront would cache these at AWS edge 
+locations globally, reducing latency for users and taking 
+load off the ELB entirely. This directly addresses the 
+bottleneck found in the stress test.
+
+**3. Configure EBS CSI Driver for Persistent Storage**  
+Prometheus currently runs with persistence disabled — metrics 
+are lost if the pod restarts. The correct fix is installing 
+the AWS EBS CSI driver add-on on the EKS cluster and 
+configuring a StorageClass for dynamic volume provisioning. 
+This was descoped during the project due to time constraints.
+
+**4. Revisit Autoscaling Strategy**  
+The stress test showed that response time degradation occurred 
+at the load balancer and network layer while pod CPU remained 
+below 5%. This suggests CPU-based HPA alone is not the ideal 
+scaling signal for this workload. A more production-oriented 
+approach would use request-rate or latency-based scaling via 
+custom metrics exposed through Prometheus Adapter or KEDA.
+
+**5. Add Pod Disruption Budgets (PDB)**  
+Currently nothing prevents Kubernetes from terminating both 
+pods simultaneously during node maintenance. A PDB would 
+guarantee at least 1 pod stays running at all times during 
+voluntary disruptions like node upgrades.
+
+**6. Implement GitOps with ArgoCD**  
+Currently deployments are applied manually with kubectl. 
+ArgoCD would continuously reconcile the cluster state against 
+the GitHub repository, enabling declarative GitOps-based 
+deployments while reducing configuration drift between 
+environments.
+
+**7. Add Network Policies**  
+Currently all pods in the cluster can communicate with each 
+other freely. Network Policies would restrict traffic so only 
+Prometheus pods can scrape application metrics, while external 
+traffic reaches the game pods exclusively through the load 
+balancer. This enforces the principle of least privilege at 
+the network level.
+
+**8. Multi-Region Deployment**  
+The current cluster runs in us-east-1 only. A production 
+simulation would deploy to at least two regions with Route 
+53 latency-based routing — so users in Europe hit eu-west-1 
+and users in the US hit us-east-1, with automatic failover 
+if one region goes down.
