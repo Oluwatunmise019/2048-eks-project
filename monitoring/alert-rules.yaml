@@ -1,0 +1,30 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: 2048-alerts
+  namespace: monitoring
+  labels:
+    app: prometheus
+spec:
+  groups:
+  - name: 2048-game.rules
+    rules:
+    - alert: PodRestartingTooOften
+      expr: increase(kube_pod_container_status_restarts_total[5m]) > 3
+      for: 1m
+      labels:
+        severity: warning
+        project: 2048-eks
+      annotations:
+        summary: "Pod {{ $labels.pod }} is restarting too often"
+        description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} has restarted more than 3 times in the last 5 minutes. This likely indicates a crash loop."
+
+    - alert: HighCPUUtilization
+      expr: rate(container_cpu_usage_seconds_total{namespace="default"}[5m]) * 100 > 80
+      for: 2m
+      labels:
+        severity: critical
+        project: 2048-eks
+      annotations:
+        summary: "High CPU on {{ $labels.pod }}"
+        description: "Pod {{ $labels.pod }} has been above 80% CPU for 2 minutes. HPA should be scaling."
